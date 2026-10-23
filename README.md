@@ -30,6 +30,6 @@ then writes it, one part at a time. Nothing is sent to or fetched from the inter
 ## What you need
 
 A Windows PC with an **NVIDIA graphics card with 24 GB** of memory, an
-internet connection for the one-time downloads, and about 40 GB of free
-disk space. No graphics card that size? Watch [Basic usage](docs/USAGE.md)
+internet connection for the one-time downloads, and about 20 GB of free
+disk space to store the model. No graphics card that size? Watch [Basic usage](docs/USAGE.md)
 to see what it does.
