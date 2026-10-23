@@ -1,3 +1,9 @@
+
+
+
+
+
+
 # Basic usage
 
 How to go from an idea to a written chapter.
@@ -10,9 +16,9 @@ How to go from an idea to a written chapter.
 
 > 🎬 **Video:** 
 ## How it works
-https://christian-marheim-ai-made.github.io/story_loom/demo_video/20261023_134454_Export.MOV
+[https://christian-marheim-ai-made.github.io/story_loom/demo_video/20261023_134454_Export.MOV](https://github.com/user-attachments/assets/3dfad188-c494-4249-8914-dca72314e1b2)
 
-> ✏️ **Sketch:** *coming soon.* Until then, the outline:
+> ✏️ **Sketch:**
 
 ```mermaid
 flowchart LR
