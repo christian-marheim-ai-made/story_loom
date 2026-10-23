@@ -1,6 +1,6 @@
 
 [paths]
-models_dir    = "models"
+models_dir    = "../models"
 
 [runner]
 backend           = "llamacpp"

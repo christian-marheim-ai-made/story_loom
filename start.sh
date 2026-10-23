@@ -176,12 +176,6 @@ if ! $PY -c "import sys; assert sys.version_info[:2]==(3,12)" 2>/dev/null; then
   red "  python 3.12 not found via 'py -3.12'"; exit 1
 fi
 $PY -c "import sys; print('  python', '.'.join(map(str, sys.version_info[:3])))"
-if ! $PY -c "import fastapi, uvicorn" 2>/dev/null; then
-  red "  dependencies missing (fastapi / uvicorn)"
-  echo "  fix: py -3.12 -m pip install fastapi uvicorn"
-  exit 1
-fi
-grn "  dependencies present"
 
 HARD_RED_FILE="${TMPDIR:-/tmp}/loom-hard-red.$$"
 : > "$HARD_RED_FILE"

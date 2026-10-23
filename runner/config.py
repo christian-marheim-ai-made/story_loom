@@ -109,6 +109,10 @@ class Config:
     def runner(self) -> dict:
         r = self.data["runner"]
         llama = os.environ.get("LOOM_LLAMA_SERVER", "").strip()
+        if not llama and r.get("llama_server", "llama-server") == "llama-server":
+            bundled = self.root.parent / "llama" / "llama-server.exe"
+            if bundled.exists():
+                llama = str(bundled)
         return {**r, "llama_server": llama} if llama else r
 
     @property

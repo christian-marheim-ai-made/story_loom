@@ -1,0 +1,12 @@
+# downloads (see docs/INSTALL.md)
+models/
+llama/
+
+# a book kept in the app folder (./start.sh with no folder)
+loom/
+logs/
+extractor/stories/
+extractor/shared/
+README.txt
+
+__pycache__/
