@@ -10,7 +10,7 @@ How to go from an idea to a written chapter.
 
 > 🎬 **Video:** 
 ## How it works
-https://christian-marheim-ai-made.github.io/story_loom/demo_video/story_loom_simple.MP4
+https://christian-marheim-ai-made.github.io/story_loom/demo_video/20261023_134454_Export.MOV
 
 > ✏️ **Sketch:** *coming soon.* Until then, the outline:
 
