@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Story Extractor</title>
+<style>  :root {
+    --bg:#14161a; --panel:#1b1e24; --card:#22262e; --card-hi:#2a2f39;
+    --ink:#e8e6e1; --dim:#9a978f; --line:#33383f; --sel:#6b7686;
+    --ok:#7ee08a; --warn:#ffb64e; --bad:#ff6b6b; --acc:#4ea1ff;
+  }
+  * { box-sizing:border-box; margin:0; }
+  html,body { height:100%; }
+  body { background:var(--bg); color:var(--ink); font:13px/1.5 system-ui,Segoe UI,sans-serif;
+         display:flex; flex-direction:column; overflow:hidden; }
+  button { font:inherit; color:inherit; background:var(--card); border:1px solid var(--line);
+           border-radius:6px; padding:.28rem .7rem; cursor:pointer; }
+  button:hover:not(:disabled) { background:var(--card-hi); }
+  button:disabled { opacity:.4; cursor:default; }
+  input,select,textarea { font:inherit; color:inherit; background:var(--bg);
+    border:1px solid var(--line); border-radius:6px; padding:.3rem .5rem; }
+  textarea { resize:vertical; }
+  label.lab { display:block; color:var(--dim); font-size:.68rem; text-transform:uppercase;
+              letter-spacing:.06em; margin-bottom:.2rem; }
+  .hint { color:var(--dim); font-size:.78rem; }
+  header { display:flex; align-items:center; gap:.9rem; padding:.55rem 1rem;
+           background:var(--panel); border-bottom:1px solid var(--line); flex:0 0 auto; }
+  header h1 { font-size:1rem; font-weight:600; }
+  header .grow { flex:1; }
+  #conn { font-size:.75rem; }
+  #top { padding:.7rem 1rem; border-bottom:1px solid var(--line); flex:0 0 auto;
+         display:grid; grid-template-columns:minmax(240px,1fr) minmax(260px,1.2fr) auto; gap:.9rem; }
+  #drop { border:1.5px dashed var(--line); border-radius:10px; padding:.8rem;
+          text-align:center; color:var(--dim); cursor:pointer; transition:.15s; }
+  #drop.hot { border-color:var(--acc); background:#1d2530; color:var(--ink); }
+  .fields { display:flex; flex-direction:column; gap:.45rem; }
+  .row { display:flex; gap:.5rem; align-items:end; flex-wrap:wrap; }
+  #chapters { padding:.5rem 1rem; border-bottom:1px solid var(--line); flex:0 0 auto;
+              max-height:22vh; overflow-y:auto; }
+  .chrow { display:flex; align-items:center; gap:.5rem; padding:.22rem .3rem; font-size:.8rem;
+           border-radius:6px; }
+  .chrow:hover { background:var(--card); }
+  .chrow .nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .chrow .sz { color:var(--dim); font-size:.72rem; }
+  .chrow button { padding:.05rem .4rem; font-size:.72rem; }
+  #gridwrap { flex:1 1 auto; overflow:auto; padding:.6rem 1rem 1rem; min-height:0; }
+  table.grid { border-collapse:separate; border-spacing:0; font-size:.78rem; }
+  table.grid th, table.grid td { border-bottom:1px solid var(--line); padding:.3rem .45rem;
+                                 white-space:nowrap; }
+  table.grid thead th { position:sticky; top:0; background:var(--bg); z-index:2; color:var(--dim);
+    font-weight:600; font-size:.68rem; text-transform:uppercase; letter-spacing:.04em;
+    text-align:center; cursor:help; }
+  table.grid tbody th { position:sticky; left:0; background:var(--bg); z-index:1; text-align:left;
+    font-weight:500; max-width:220px; overflow:hidden; text-overflow:ellipsis; }
+  td.cell { text-align:center; cursor:pointer; font-size:.95rem; }
+  td.cell:hover { background:var(--card); }
+  .st-none { color:var(--dim); } .st-queued { color:var(--dim); }
+  .st-running { color:var(--warn); display:inline-block; animation:spin 1.2s linear infinite; }
+  .st-done { color:var(--ok); } .st-failed { color:var(--bad); }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  #result { flex:0 0 auto; border-top:1px solid var(--line); background:var(--panel);
+            padding:.6rem 1rem; max-height:34vh; overflow-y:auto; display:none; }
+  #result.on { display:block; }
+  #result pre { white-space:pre-wrap; font:12px/1.6 ui-monospace,Consolas,monospace;
+                color:#d9d6cf; margin-top:.4rem; }
+  .empty { color:var(--dim); padding:2rem 1rem; text-align:center; }
+  .revbar { display:flex; gap:.4rem; align-items:center; flex-wrap:wrap; margin:.45rem 0 .2rem; }
+  .vchip { font-size:.8rem; padding:.1rem .5rem; border-radius:99px; border:1px solid var(--line);
+           background:transparent; cursor:pointer; color:var(--dim); }
+  .vchip.on.up { color:var(--ok); border-color:var(--ok); }
+  .vchip.on.dn { color:var(--bad); border-color:var(--bad); }
+  #modal-ov { position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:200;
+              display:flex; align-items:center; justify-content:center; }
+  .modal { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+           width:min(620px,92vw); max-height:84vh; overflow-y:auto; padding:.8rem .95rem;
+           display:flex; flex-direction:column; gap:.6rem; }
+  .mhead { display:flex; align-items:center; gap:.5rem; }
+  .cats { display:flex; gap:.35rem; flex-wrap:wrap; }
+  .cat { font-size:.75rem; padding:.12rem .55rem; border-radius:99px; cursor:pointer;
+         border:1px solid var(--line); color:var(--dim); background:transparent; }
+  .cat.on { color:var(--ink); border-color:var(--acc); background:#1d2530; }
+  .tlentry { border:1px solid var(--line); border-radius:8px; padding:.45rem .6rem; font-size:.8rem; }
+  .tlentry .meta { color:var(--dim); font-size:.7rem; margin-bottom:.2rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Story Extractor</h1>
+  <span class="hint" id="dataroot">…</span>
+  <span class="grow"></span>
+  <span id="conn" class="hint">·</span>
+  <button id="toplistbtn" title="browse the best-of collection">★ Toplist</button>
+  <button id="reload" title="re-scan the data root">↻ rescan</button>
+</header>
+
+<div id="top">
+  <div>
+    <div id="drop">
+      <b>Drop chapter files here</b><br>
+      <span class="hint">.txt / .md — one file = one chapter · or click to pick</span>
+      <input type="file" id="picker" multiple accept=".txt,.md,text/plain" style="display:none">
+    </div>
+    <div style="margin-top:.5rem;border:1px solid var(--line);border-radius:8px;padding:.5rem .6rem">
+      <label class="lab" style="margin-bottom:.35rem">which story do these chapters belong to?</label>
+      <div class="row" style="gap:.9rem;margin-bottom:.4rem">
+        <label style="display:flex;gap:.3rem;align-items:center;font-size:.8rem;cursor:pointer">
+          <input type="radio" name="storymode" id="mode-new" value="new" checked> new story</label>
+        <label style="display:flex;gap:.3rem;align-items:center;font-size:.8rem;cursor:pointer">
+          <input type="radio" name="storymode" id="mode-existing" value="existing"> add to existing</label>
+      </div>
+      <div class="row">
+        <div style="flex:1" id="newwrap">
+          <input type="text" id="story" placeholder="name the new story" style="width:100%">
+        </div>
+        <div style="flex:1;display:none" id="existwrap">
+          <select id="existing" style="width:100%"><option value="">— pick a story —</option></select>
+        </div>
+      </div>
+      <div class="hint" id="storyhint" style="margin-top:.35rem">Each story is fully separate: its own chapters, its own toplist, its own example libraries.</div>
+    </div>
+  </div>
+
+  <div class="fields">
+    <div>
+      <label class="lab">custom extraction (optional — becomes custom_input.txt)</label>
+      <textarea id="custom" rows="3" style="width:100%"
+        placeholder="Anything extra to pull out of every chapter, in your own words."></textarea>
+    </div>
+    <div class="row">
+      <div><label class="lab">model</label><select id="model"></select></div>
+      <div><label class="lab">temp</label><input type="number" id="temp" value="0.3" step="0.05" min="0" max="2" style="width:5rem"></div>
+    </div>
+  </div>
+
+  <div class="fields" style="justify-content:flex-end">
+    <div class="hint" id="estimate">—</div>
+    <div class="row">
+      <button id="run" disabled title="wired in X4">▶ Extract all</button>
+      <button id="cancel" disabled title="wired in X4">■ Cancel all</button>
+    </div>
+  </div>
+</div>
+
+<div id="chapters"></div>
+<div id="gridwrap"><div class="empty">Drop files above, or pick an existing story, to see the grid.</div></div>
+<div id="result"></div>
+
+<script>'use strict';
+const DIMS = [
+  ['plot',                   'plot',                    'plot',    'what the plot was about'],
+  ['events',                 'events',                  'events',  'what happened'],
+  ['adjectives_subjects',    'adjectives_subjects',     'descr',   'how it was described'],
+  ['matches_against_toplist','matches_against_toplist', 'toplist', 'overlap with / extension of the best-of collection'],
+  ['story_context',          'story_context',           'context', 'per-paragraph: leading up, payoff, aftermath'],
+  ['writingstyle',           'writingstyle',            'style',   'the writing style'],
+  ['topics',                 'topics',                  'topics',  'which topics appear'],
+  ['person_descriptions',    'person_descriptions',     'persons', 'looks, characteristics, origin, names, roles, preferences'],
+  ['person_behaviour',       'person_behaviour',        'behav',   'behaviour of the characters'],
+  ['interactions',           'interactions',            'interact','interactions between characters'],
+  ['custom_input',           'custom_input',            'custom',  'the custom instruction from the top field'],
+];
+const ICON = { none:['○','st-none','not extracted'], queued:['◔','st-queued','queued'],
+               running:['⟳','st-running','running'], done:['●','st-done','done'],
+               failed:['✗','st-failed','failed — click to retry'] };
+const S = { story:'', chapters:[], custom:'', model:null, temp:0.3, dataRoot:'',
+            listing:null, sel:null };
+const $ = (s)=>document.querySelector(s);
+const el = (t,a={},...k)=>{ const n=document.createElement(t);
+  for (const [key,v] of Object.entries(a)) { if(key==='class')n.className=v;
+    else if(key.startsWith('on'))n[key]=v; else if(v!=null)n.setAttribute(key,v); }
+  for (const c of k.flat()) if(c!=null) n.append(c.nodeType?c:document.createTextNode(c));
+  return n; };
+const api = {
+  async get(p){ const r=await fetch(p); if(!r.ok) throw new Error(r.status+' '+await r.text());
+    return r.json(); },
+  async post(p,b){ const r=await fetch(p,{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify(b)}); const t=await r.text();
+    if(!r.ok) throw new Error(t.slice(0,200)); return JSON.parse(t||'{}'); },
+};
+const chapterFolder = (i)=>`Chapter ${i+1}`;
+const cIdx = (c,i)=> (c && c.index != null) ? c.index : i;
+const cName = (c,i)=> (c && c.name) ? c.name : chapterFolder(cIdx(c,i));
+const dimFile = (dim,i)=> dim==='custom_input' ? 'custom_input.txt' : `${dim}_chapter${i+1}.txt`;
+const srcFile = (i)=>`chapter${i+1}.txt`;
+async function ping() {
+  const box = $('#conn');
+  try {
+    const st = await api.get('/api/status');
+    const present = st.models.filter(m=>m.present);
+    box.textContent = `studio ✓ ${present.length} models`; box.style.color = 'var(--ok)';
+    const sel = $('#model');
+    if (!sel.options.length) {
+      sel.replaceChildren(...present.map(m=>el('option',{value:m.key},m.label)));
+      S.model = present[0]?.key ?? null;
+      sel.onchange = ()=>{ S.model = sel.value; };
+    }
+  } catch(e) { box.textContent = 'studio ✗ unreachable'; box.style.color = 'var(--bad)'; }
+}
+async function rescan() {
+  try {
+    const t = await api.get('/extract/list');
+    S.listing = t; S.dataRoot = t.data_root;
+    $('#dataroot').textContent = t.data_root;
+    const st = await api.get('/extract/stories');
+    S.stories = st.stories ?? [];
+    const sel = $('#existing');
+    const cur = sel.value;
+    sel.replaceChildren(el('option',{value:''},'— pick a story —'),
+      ...S.stories.map(s=>el('option',{value:s.name},
+        `${s.title || s.name} — ${s.chapters.length} ch · ${s.toplist_entries} toplist`)));
+    sel.value = cur;
+    storyHint();
+  } catch(e) { $('#dataroot').textContent = 'data root unreachable'; }
+}
+const storyMode = ()=> document.querySelector('input[name=storymode]:checked')?.value ?? 'new';
+function currentStoryName(){
+  return storyMode()==='existing' ? ($('#existing').value || '') : $('#story').value.trim();
+}
+function storyRecord(name){ return (S.stories ?? []).find(s=>s.name===name); }
+function storyHint() {
+  const name = currentStoryName();
+  const rec = storyRecord(name);
+  const box = $('#storyhint');
+  const pending = S.chapters.filter(c=>!c.onDisk).length;
+  if (!name) { box.textContent = storyMode()==='existing'
+    ? 'Pick a story to add these chapters to.'
+    : 'Each story is fully separate: its own chapters, its own toplist, its own example libraries.';
+    box.style.color = 'var(--dim)'; return; }
+  if (rec) {
+    const next = rec.next_chapter_index + 1;
+    box.textContent = `“${rec.title || name}” already has ${rec.chapters.length} chapter(s). `
+      + (pending ? `New files become Chapter ${next}${pending>1?`–${next+pending-1}`:''} — nothing is overwritten. ` : '')
+      + `Toplist: ${rec.toplist_entries} entr${rec.toplist_entries===1?'y':'ies'} (scope: ${rec.scope?.toplist ?? 'story'}).`;
+    box.style.color = 'var(--warn)';
+  } else {
+    box.textContent = `New story “${name}” — starts with its own empty toplist and example libraries.`;
+    box.style.color = 'var(--ok)';
+  }
+}
+async function loadExisting(name) {
+  const st = (S.listing?.stories ?? []).find(s=>s.name===name);
+  if (!st) return;
+  S.story = name; $('#story').value = name;
+  S.chapters = st.chapters.map((c)=>{
+    const idx = (parseInt((c.name.match(/(\d+)/)||[])[1],10) || 1) - 1;   
+    const status = {};
+    for (const [dim] of DIMS) status[dim] = (c.files?.[dimFile(dim,idx)] != null) ? 'done' : 'none';
+    return { name:c.name, index:idx,
+             srcName:c.files?.[srcFile(idx)]!=null ? srcFile(idx) : '(source not on disk)',
+             text:null, chars:c.files?.[srcFile(idx)] ?? 0, status, onDisk:true };
+  });
+  S.sel = null;
+  render();
+  await Promise.all(S.chapters.map(async (c,i) => {
+    if (c.srcName.startsWith('(')) return;
+    try {
+      const r = await api.get('/extract/read?path='+
+        encodeURIComponent(`stories/${name}/${c.name}/${srcFile(cIdx(c,i))}`));
+      if (r.exists) { c.text = r.text; c.chars = r.text.length; }
+    } catch(e){}
+  }));
+  render();
+}
+async function addFiles(fileList) {
+  const files = [...fileList].filter(f=>/\.(txt|md)$/i.test(f.name))
+    .sort((a,b)=>a.name.localeCompare(b.name, undefined, {numeric:true}));
+  if (!files.length) return;
+  for (const f of files) {
+    const text = await f.text();
+    const status = {}; for (const [dim] of DIMS) status[dim] = 'none';
+    S.chapters.push({ name:null, srcName:f.name, text, chars:text.length, status, onDisk:false });
+  }
+  if (storyMode()==='new' && !$('#story').value.trim()) {
+    const base = files[0].name.replace(/\.(txt|md)$/i,'').replace(/[\s_-]*\d+$/,'').trim();
+    $('#story').value = base || 'Story 1';
+  }
+  S.story = currentStoryName();
+  renumber(); render(); storyHint();
+}
+function renumber(){
+  const rec = storyRecord(currentStoryName());
+  let n = 0;
+  S.chapters.forEach((c) => {
+    if (c.onDisk) return;
+    while (rec && rec.chapters.includes(chapterFolder(n))) n++;
+    c.name = chapterFolder(n); c.index = n; n++;
+  });
+  S.chapters.forEach((c,i)=>{ if(c.onDisk && c.index==null) c.index = i; });
+}
+function move(i,d){ const j=i+d; if(j<0||j>=S.chapters.length) return;
+  [S.chapters[i],S.chapters[j]]=[S.chapters[j],S.chapters[i]]; renumber(); render(); }
+function remove(i){ S.chapters.splice(i,1); renumber(); render(); }
+const JOBS = { list:[], timer:null };
+function jobFor(i, dim) {
+  const c = S.chapters[i]; if (!c) return null;
+  return JOBS.list.find(j => j.story===S.story && j.chapter===(cName(c,i))
+    && j.dim===dim && ['queued','running'].includes(j.status));
+}
+async function pollJobs() {
+  try {
+    const d = await api.get('/extract/jobs');
+    JOBS.list = d.jobs ?? [];
+    let touched = false;
+    for (let i=0;i<S.chapters.length;i++) {
+      const c = S.chapters[i];
+      for (const [dim] of DIMS) {
+        const live = jobFor(i, dim);
+        const want = live ? (live.status==='running'?'running':'queued')
+          : (JOBS.list.find(j=>j.story===S.story && j.chapter===(cName(c,i))
+              && j.dim===dim && j.status==='done') ? 'done'
+            : JOBS.list.find(j=>j.story===S.story && j.chapter===(cName(c,i))
+              && j.dim===dim && j.status==='failed') ? 'failed'
+            : c.status[dim]);
+        if (want !== c.status[dim]) { c.status[dim] = want; touched = true; }
+      }
+    }
+    if (touched) render();
+    const busy = JOBS.list.some(j=>['queued','running'].includes(j.status));
+    $('#cancel').disabled = !busy;
+    if (!busy && JOBS.timer) { clearInterval(JOBS.timer); JOBS.timer=null; rescan(); }
+  } catch(e){}
+}
+function startPolling(){ if(!JOBS.timer) JOBS.timer = setInterval(pollJobs, 1500); pollJobs(); }
+async function queueCell(i, dim) {
+  const c = S.chapters[i];
+  if (c.text == null) throw new Error('source text is not in memory — re-drop the file to re-run');
+  const rv = REVIEW[`${cName(c,i)}|${dim}`] ?? {};
+  const fix = (rv.vote === -1 && rv.comment) ? rv.comment : '';
+  const comp = await api.post('/extract/compile',
+    { dim, text:c.text, custom:$('#custom').value, max_tokens: maxTokensFor(dim), fix, story:S.story });
+  await api.post('/extract/jobs', {
+    story:S.story, chapter:cName(c,i), chapter_index:cIdx(c,i), dim,
+    prompts:comp.prompts, out_file:dimFile(dim,cIdx(c,i)),
+    gen:{ model:S.model, temperature:S.temp, max_tokens:maxTokensFor(dim) } });
+  c.status[dim] = 'queued';
+}
+const maxTokensFor = (dim) =>
+  dim==='story_context' ? 1200 :
+  (dim==='person_descriptions'||dim==='interactions'||dim==='person_behaviour') ? 900 : 700;
+async function extractAll() {
+  if (!S.story) { alert(storyMode()==='existing' ? 'pick a story first' : 'name the new story first'); return; }
+  await api.post('/extract/stories', { story:S.story, title:S.story });
+  await rescan(); renumber();
+  $('#run').disabled = true;
+  for (let i=0;i<S.chapters.length;i++) {
+    const c = S.chapters[i];
+    if (c.text != null)
+      await api.post('/extract/save', { story:S.story, chapter:cName(c,i),
+        file:srcFile(cIdx(c,i)), content:c.text });
+  }
+  let queued = 0;
+  for (let i=0;i<S.chapters.length;i++)
+    for (const [dim] of activeDims())
+      if (S.chapters[i].status[dim] !== 'done') { await queueCell(i, dim); queued++; }
+  render(); startPolling();
+  if (!queued) alert('nothing to do — every cell is already extracted (use a cell’s Re-run)');
+}
+async function cancelAll() {
+  await api.post('/extract/jobs/cancel', {});
+  await pollJobs();
+}
+async function rerunCell(i, dim) {
+  try { await queueCell(i, dim); render(); startPolling(); }
+  catch(e){ alert(e.message); }
+}
+function activeDims(){ return DIMS.filter(([id])=> id!=='custom_input' || $('#custom').value.trim()); }
+function render() {
+  const list = $('#chapters');
+  if (!S.chapters.length) list.replaceChildren();
+  else list.replaceChildren(
+    el('div',{class:'hint',style:'margin-bottom:.3rem'},
+      `${S.chapters.length} chapter${S.chapters.length===1?'':'s'} — order = chapter numbering`),
+    ...S.chapters.map((c,i)=>el('div',{class:'chrow'},
+      el('b',{style:'min-width:5.5rem'}, cName(c,i)),
+      el('span',{class:'nm'}, c.srcName),
+      el('span',{class:'sz'}, c.onDisk ? 'on disk' : `${(c.chars/1024).toFixed(1)} KB`),
+      el('button',{onclick:()=>move(i,-1), disabled:i===0?'':null},'↑'),
+      el('button',{onclick:()=>move(i,1), disabled:i===S.chapters.length-1?'':null},'↓'),
+      el('button',{onclick:()=>remove(i)},'✕'))));
+  const wrap = $('#gridwrap');
+  const dims = activeDims();
+  if (!S.chapters.length) {
+    wrap.replaceChildren(el('div',{class:'empty'},
+      'Drop files above, or pick an existing story, to see the grid.'));
+  } else {
+    const head = el('tr',{}, el('th',{},'chapter'),
+      ...dims.map(([id,,head,task])=>el('th',{title:`${id} — ${task}`}, head)));
+    const rows = S.chapters.map((c,i)=>el('tr',{},
+      el('th',{title:c.srcName}, cName(c,i)),
+      ...dims.map(([id])=>{ const st = c.status[id] ?? 'none'; const ic = ICON[st];
+        return el('td',{class:'cell', title:`${id} — ${ic[2]}`,
+          onclick:()=>openCell(i,id)}, el('span',{class:ic[1]}, ic[0])); })));
+    wrap.replaceChildren(el('table',{class:'grid'},
+      el('thead',{},head), el('tbody',{},...rows)));
+  }
+  const n = S.chapters.length * activeDims().length;
+  const pending = S.chapters.reduce((a,c)=>a+activeDims().filter(([d])=>c.status[d]!=='done').length,0);
+  const busy = JOBS.list.some(j=>['queued','running'].includes(j.status));
+  const inflight = JOBS.list.filter(j=>['queued','running'].includes(j.status)).length;
+  $('#estimate').textContent = n
+    ? `${n} cells · ${pending} to run${busy?` · ${inflight} in flight`:''} · ≈ ${Math.max(1,Math.round(pending*30/60))} min warm`
+    : '—';
+  $('#run').disabled = !S.chapters.length || busy || !S.chapters.some(c=>c.text!=null);
+  $('#run').title = S.chapters.some(c=>c.text!=null) ? 'queue every cell that is not done'
+    : 'source text not in memory — re-drop the files to run';
+  $('#cancel').disabled = !busy;
+}
+async function openCell(i, dim) {
+  const c = S.chapters[i]; const box = $('#result');
+  const rel = `stories/${S.story}/${cName(c,i)}/${dimFile(dim,cIdx(c,i))}`;
+  box.classList.add('on');
+  box.replaceChildren(el('div',{class:'hint'},`${rel} — loading…`));
+  const st = c.status[dim];
+  let body;
+  if (st === 'done') {
+    try { const r = await api.get('/extract/read?path='+encodeURIComponent(rel));
+      body = r.exists ? el('pre',{}, r.text) : el('div',{class:'hint'},'file vanished from disk');
+    } catch(e){ body = el('div',{class:'hint'},'read failed: '+e.message); }
+  } else if (st === 'running' || st === 'queued') {
+    const j = jobFor(i, dim);
+    body = el('div',{class:'hint'}, st==='running'
+      ? `running… part ${(j?.parts_done??0)+1}/${j?.parts??1}`
+      : `queued — position ${j?.queue_pos ?? '?'}`);
+  } else if (st === 'failed') {
+    const j = JOBS.list.find(x=>x.story===S.story && x.chapter===(cName(c,i))
+      && x.dim===dim && x.status==='failed');
+    body = el('div',{class:'hint',style:'color:var(--bad)'}, 'failed: ' + (j?.error ?? 'unknown'));
+  } else {
+    body = el('div',{class:'hint'},'not extracted yet.');
+  }
+  const canRun = c.text != null && !['queued','running'].includes(st);
+  let revbar = null;
+  if (st === 'done') {
+    await loadReview(i);
+    const key = `${cName(c,i)}|${dim}`;
+    const v = REVIEW[key] ?? {};
+    const cbox = el('input',{type:'text',style:'flex:1 1 220px;font-size:.78rem',
+      placeholder:'why? (a 👎 comment steers the next re-run)'});
+    cbox.value = v.comment ?? '';
+    let tm; cbox.oninput = ()=>{ clearTimeout(tm);
+      tm = setTimeout(()=>setComment(i,dim,cbox.value).catch(()=>{}), 600); };
+    revbar = el('div',{class:'revbar'},
+      el('button',{class:'vchip'+(v.vote===1?' on up':''),
+        title:'rate up — adds this to the toplist', onclick:()=>setVote(i,dim,1)},'👍'),
+      el('button',{class:'vchip'+(v.vote===-1?' on dn':''),
+        title:'rate down — your comment steers the re-run', onclick:()=>setVote(i,dim,-1)},'👎'),
+      el('button',{title:'teach the extractor how to look for this dimension',
+        onclick:()=>promoteToExamples(i,dim)},'⇧ promote to examples'),
+      cbox);
+  }
+  box.replaceChildren(
+    el('div',{style:'display:flex;align-items:center;gap:.6rem'},
+      el('b',{}, `${cName(c,i)} · ${dim}`),
+      el('span',{class:'hint',style:'flex:1'}, rel),
+      canRun ? el('button',{onclick:()=>{ box.classList.remove('on'); rerunCell(i,dim); }},
+        st==='done' ? '↻ Re-run' : '▶ Run this') : null,
+      el('button',{onclick:()=>box.classList.remove('on')},'✕')),
+    revbar, body);
+}
+const drop = $('#drop');
+drop.onclick = ()=>$('#picker').click();
+$('#picker').onchange = (e)=>{ addFiles(e.target.files); e.target.value=''; };
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,(e)=>{
+  e.preventDefault(); e.stopPropagation(); drop.classList.add('hot'); }));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,(e)=>{
+  e.preventDefault(); e.stopPropagation(); if(ev==='dragleave') drop.classList.remove('hot'); }));
+drop.addEventListener('drop',(e)=>{ drop.classList.remove('hot');
+  addFiles(e.dataTransfer.files); });
+addEventListener('dragover',(e)=>e.preventDefault());
+addEventListener('drop',(e)=>{ e.preventDefault(); if(!drop.contains(e.target)) addFiles(e.dataTransfer.files); });
+$('#story').oninput = ()=>{ S.story = $('#story').value.trim(); };
+$('#custom').oninput = ()=>{ S.custom = $('#custom').value; render(); };
+$('#temp').onchange = ()=>{ S.temp = Number($('#temp').value)||0.3; };
+function applyStoryMode(){
+  const existing = storyMode()==='existing';
+  $('#newwrap').style.display = existing ? 'none' : '';
+  $('#existwrap').style.display = existing ? '' : 'none';
+  S.story = currentStoryName();
+  renumber(); render(); storyHint();
+}
+document.querySelectorAll('input[name=storymode]').forEach(r=>r.onchange=()=>{
+  if (storyMode()==='new') { S.chapters = S.chapters.filter(c=>!c.onDisk); $('#existing').value=''; }
+  applyStoryMode();
+});
+$('#existing').onchange = async (e)=>{
+  if (e.target.value) { await loadExisting(e.target.value); }
+  else { S.chapters=[]; S.story=''; render(); }
+  storyHint();
+};
+$('#story').addEventListener('input', ()=>{ S.story=$('#story').value.trim(); storyHint(); });
+$('#reload').onclick = async ()=>{ await rescan();
+  if (S.story && S.listing?.stories.some(s=>s.name===S.story)) await loadExisting(S.story); };
+function openModal(title, body, footer) {
+  closeModal();
+  const ov = el('div',{id:'modal-ov'},
+    el('div',{class:'modal'},
+      el('div',{class:'mhead'}, el('b',{},title), el('span',{style:'flex:1'}),
+        el('button',{onclick:closeModal},'✕')),
+      body, footer ?? null));
+  ov.onclick = (e)=>{ if(e.target===ov) closeModal(); };
+  document.body.append(ov);
+}
+function closeModal(){ document.getElementById('modal-ov')?.remove(); }
+addEventListener('keydown',(e)=>{ if(e.key==='Escape') closeModal(); });
+const REVIEW = {};                       
+async function loadReview(i) {
+  const c = S.chapters[i]; const ch = cName(c,i);
+  try {
+    const r = await api.get(`/extract/review?story=${encodeURIComponent(S.story)}`
+      + `&chapter=${encodeURIComponent(ch)}`);
+    for (const [dim,v] of Object.entries(r.review ?? {})) REVIEW[`${ch}|${dim}`] = v;
+    return r;
+  } catch(e){ return { review:{}, suggest:[] }; }
+}
+async function setVote(i, dim, vote) {
+  const ch = cName(S.chapters[i],i);
+  const key = `${ch}|${dim}`;
+  const cur = REVIEW[key] ?? {};
+  const next = cur.vote === vote ? 0 : vote;
+  REVIEW[key] = { ...cur, vote: next };
+  await api.post('/extract/review',
+    { story:S.story, chapter:ch, dim, vote:next, comment:cur.comment ?? '' });
+  if (next === 1) await rateUpModal(i, dim);       
+  else openCell(i, dim);
+}
+async function setComment(i, dim, comment) {
+  const ch = cName(S.chapters[i],i);
+  const key = `${ch}|${dim}`;
+  REVIEW[key] = { ...(REVIEW[key] ?? {}), comment };
+  await api.post('/extract/review',
+    { story:S.story, chapter:ch, dim, vote:REVIEW[key].vote ?? 0, comment });
+}
+async function rateUpModal(i, dim) {
+  const ch = cName(S.chapters[i],i);
+  const sel = String(window.getSelection?.() ?? '').trim();
+  const rel = `stories/${S.story}/${ch}/${dimFile(dim,cIdx(c,i))}`;
+  let full = '';
+  try { full = (await api.get('/extract/read?path='+encodeURIComponent(rel))).text ?? ''; } catch(e){}
+  const excerpt = sel || full.trim();
+  const meta = await api.get(`/extract/review?story=${encodeURIComponent(S.story)}`
+    + `&chapter=${encodeURIComponent(ch)}&dim=${encodeURIComponent(dim)}`);
+  const chosen = new Set([dim]);
+  const shareBox = el('input',{type:'checkbox'});
+  const catBox = el('div',{class:'cats'});
+  const drawCats = (list) => catBox.replaceChildren(...list.map(c =>
+    el('button',{class:'cat'+(chosen.has(c)?' on':''), onclick:()=>{
+      chosen.has(c) ? chosen.delete(c) : chosen.add(c); drawCats(list); }}, c)));
+  let all = [...new Set([...(meta.suggest ?? []), dim])];
+  drawCats(all);
+  const add = el('input',{type:'text',placeholder:'add a category and press Enter',style:'width:100%'});
+  add.onkeydown = (e)=>{ if(e.key==='Enter' && add.value.trim()){
+    const v = add.value.trim().toLowerCase(); if(!all.includes(v)) all.push(v);
+    chosen.add(v); add.value=''; drawCats(all); e.preventDefault(); } };
+  openModal('★ Add to toplist',
+    el('div',{},
+      el('div',{class:'hint'}, sel ? 'using your selected text' : 'using the whole result'),
+      el('pre',{style:'white-space:pre-wrap;font-size:.75rem;max-height:9rem;overflow:auto;'
+        +'border:1px solid var(--line);border-radius:6px;padding:.4rem;margin:.4rem 0'}, excerpt.slice(0,900)),
+      el('label',{class:'lab'},'categories — combinable later as filters'), catBox,
+      el('div',{style:'margin-top:.4rem'}, add),
+      el('label',{style:'display:flex;gap:.4rem;align-items:center;margin-top:.6rem;font-size:.8rem;cursor:pointer'},
+        shareBox,
+        el('span',{},'transferable across stories — craft that travels (a fist-fight reads the '
+          + 'same in any book). Leave off for plot, characters, anything specific to this story.'))),
+    el('div',{style:'display:flex;justify-content:flex-end;gap:.5rem'},
+      el('button',{onclick:closeModal},'cancel'),
+      el('button',{onclick:async ()=>{
+        await api.post('/extract/toplist/add', { excerpt, story:S.story, chapter:ch, dim,
+          categories:[...chosen], shared: shareBox.checked });
+        closeModal(); openCell(i, dim);
+      }},'Add to toplist')));
+}
+async function promoteToExamples(i, dim) {
+  const ch = cName(S.chapters[i],i);
+  const sel = String(window.getSelection?.() ?? '').trim();
+  const rel = `stories/${S.story}/${ch}/${dimFile(dim,cIdx(c,i))}`;
+  let full = '';
+  try { full = (await api.get('/extract/read?path='+encodeURIComponent(rel))).text ?? ''; } catch(e){}
+  const text = sel || full.trim();
+  const ta = el('textarea',{rows:'10',style:'width:100%'}); ta.value = text;
+  openModal(`Promote to examples/${dim}.txt`,
+    el('div',{},
+      el('div',{class:'hint'},'This teaches the extractor HOW TO LOOK for this dimension — it is '
+        +'injected as an EXAMPLES block in every future prompt for it. Edit freely before saving.'),
+      el('div',{style:'margin-top:.4rem'}, ta)),
+    el('div',{style:'display:flex;justify-content:flex-end;gap:.5rem'},
+      el('button',{onclick:closeModal},'cancel'),
+      el('button',{onclick:async ()=>{
+        const r = await api.post('/extract/examples/append',{dim, text:ta.value, story:S.story});
+        closeModal();
+        alert(`saved — examples/${dim}.txt now holds ${r.entries} example(s)`);
+      }},'Append example')));
+}
+const TL = { active:new Set(), any:false };
+async function toplistPanel() {
+  const d = await api.get('/extract/toplist?story='+encodeURIComponent(S.story||''));
+  const body = el('div',{});
+  const draw = () => {
+    const chips = el('div',{class:'cats'}, ...d.categories.map(([c,n]) =>
+      el('button',{class:'cat'+(TL.active.has(c)?' on':''), onclick:()=>{
+        TL.active.has(c) ? TL.active.delete(c) : TL.active.add(c); draw(); }}, `${c} (${n})`)));
+    const match = (e) => {
+      if (!TL.active.size) return true;
+      const cs = new Set(e.categories ?? []);
+      return TL.any ? [...TL.active].some(c=>cs.has(c)) : [...TL.active].every(c=>cs.has(c));
+    };
+    const shown = d.entries.filter(match).reverse();
+    body.replaceChildren(
+      el('div',{class:'hint'}, `${d.own} own · ${d.borrowed} borrowed from other stories `
+        + `· ${d.categories.length} categories · ${d.path}`),
+      chips,
+      el('label',{style:'display:flex;gap:.4rem;align-items:center;margin:.4rem 0;font-size:.78rem'},
+        (()=>{ const cb=el('input',{type:'checkbox',...(TL.any?{checked:''}:{})});
+          cb.onchange=()=>{ TL.any=cb.checked; draw(); }; return cb; })(),
+        'match ANY of the selected categories (default: match ALL)'),
+      el('div',{class:'hint'}, `showing ${shown.length} of ${d.entries.length}`),
+      ...shown.map(e => el('div',{class:'tlentry',style:'margin-top:.4rem'
+          + (e._borrowed?';border-style:dashed':'')},
+        el('div',{class:'meta'}, (e._borrowed?'↔ borrowed · ':'') 
+          + `${e.story} · ${e.chapter} · ${e.dimension} · ${e.rated_at}`
+          + ` · [${(e.categories||[]).join(', ')}]`),
+        el('div',{}, (e.excerpt||'').slice(0,300) + ((e.excerpt||'').length>300?'…':'')),
+        el('div',{style:'display:flex;gap:.4rem;align-items:center;margin-top:.3rem'},
+          e._borrowed
+            ? el('span',{class:'hint'},'shared by its own story — manage it there')
+            : (()=>{ const cb=el('input',{type:'checkbox',...(e.shared?{checked:''}:{})});
+                cb.onchange=async ()=>{ await api.post('/extract/toplist/update',
+                  {id:e.id, story:S.story, shared:cb.checked}); refresh(); };
+                return el('label',{style:'display:flex;gap:.3rem;align-items:center;font-size:.75rem;cursor:pointer'},
+                  cb, 'transferable to other stories'); })(),
+          el('span',{style:'flex:1'}),
+          e._borrowed ? null : el('button',{onclick:async ()=>{
+            await api.post('/extract/toplist/remove',{id:e.id, story:S.story}); refresh();
+          }},'remove')))));
+  };
+  async function refresh(){ const fresh = await api.get('/extract/toplist?story='
+      + encodeURIComponent(S.story||''));
+    d.entries=fresh.entries; d.categories=fresh.categories; d.own=fresh.own;
+    d.borrowed=fresh.borrowed; d.path=fresh.path; draw(); }
+  draw();
+  openModal(`★ Toplist — ${S.story || 'no story selected'}`, body, null);
+}
+$('#toplistbtn').onclick = ()=>toplistPanel().catch(e=>alert(e.message));
+$('#run').onclick = ()=>extractAll().catch(e=>{ alert(e.message); render(); });
+$('#cancel').onclick = ()=>cancelAll().catch(e=>alert(e.message));
+window.__dbg = { S, DIMS, JOBS, REVIEW, TL, render, rescan, loadExisting, addFiles, api, dimFile,
+                 chapterFolder, activeDims, openCell, move, remove, extractAll, cancelAll,
+                 rerunCell, queueCell, pollJobs, startPolling, srcFile, setVote, setComment,
+                 rateUpModal, promoteToExamples, toplistPanel, openModal, closeModal, loadReview };
+(async function main(){ await Promise.all([ping(), rescan()]); render();
+  setInterval(ping, 15000); startPolling(); })();
+</script>
+</body>
+</html>

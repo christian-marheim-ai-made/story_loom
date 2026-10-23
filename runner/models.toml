@@ -1,0 +1,47 @@
+
+[defaults]
+ctx            = 16384
+n_gpu_layers   = 99
+cache_type_k   = "f16"
+cache_type_v   = "f16"
+temperature    = 0.85
+min_p          = 0.05
+top_p          = 1.0
+repeat_penalty = 1.05
+
+[models.cydonia-24b]
+label        = "Cydonia 24B v4.1"
+repo         = "bartowski/TheDrummer_Cydonia-24B-v4.1-GGUF"
+file         = "TheDrummer_Cydonia-24B-v4.1-Q5_K_M.gguf"
+quant        = "Q5_K_M"
+size_gb      = 16.8
+base_repo    = "TheDrummer/Cydonia-24B-v4.1"
+note         = "Official GGUF repo names its files v4j, not v4.1. bartowski used for predictable naming."
+
+[models.dolphin-venice-24b]
+label        = "Dolphin Mistral 24B Venice Edition"
+repo         = "bartowski/cognitivecomputations_Dolphin-Mistral-24B-Venice-Edition-GGUF"
+file         = "cognitivecomputations_Dolphin-Mistral-24B-Venice-Edition-Q5_K_M.gguf"
+quant        = "Q5_K_M"
+size_gb      = 16.8
+base_repo    = "dphn/Dolphin-Mistral-24B-Venice-Edition"
+note         = "The dphn org's own -GGUF repo is an empty placeholder. bartowski is the working source."
+
+[models.mistral-small-32]
+label        = "Mistral Small 3.2 24B Instruct"
+repo         = "bartowski/mistralai_Mistral-Small-3.2-24B-Instruct-2506-GGUF"
+file         = "mistralai_Mistral-Small-3.2-24B-Instruct-2506-Q5_K_M.gguf"
+quant        = "Q5_K_M"
+size_gb      = 16.8
+base_repo    = "mistralai/Mistral-Small-3.2-24B-Instruct-2506"
+
+[models.qwen3-32b]
+label           = "Qwen3 32B"
+repo            = "Qwen/Qwen3-32B-GGUF"
+file            = "Qwen3-32B-Q4_K_M.gguf"
+quant           = "Q4_K_M"
+size_gb         = 19.8
+base_repo       = "Qwen/Qwen3-32B"
+disable_thinking = false
+cache_type_k    = "q8_0"
+cache_type_v    = "q8_0"

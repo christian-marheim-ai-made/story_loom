@@ -1,0 +1,28 @@
+
+[paths]
+models_dir    = "models"
+
+[runner]
+backend           = "llamacpp"
+llama_server      = "llama-server"
+port              = 8901
+startup_timeout_s = 600
+health_poll_s     = 1.0
+shutdown_timeout_s = 60
+idle_unload_s     = 600
+warm_keep         = true
+request_timeout_s = 1800
+flash_attn        = "on"
+
+[mock]
+tokens_per_second = 45.0
+load_seconds      = 1.2
+unload_seconds    = 0.4
+fail_models       = []
+fail_first_for    = ""
+seed              = 7
+
+[write]
+divider           = "\n\n---\n\n"
+max_tokens_default = 1600
+samples_default   = 1
