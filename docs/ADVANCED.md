@@ -1,3 +1,4 @@
+
 # Advanced usage
 
 Everything behind the **Enable Advanced Mode** button: secrets and
@@ -35,6 +36,8 @@ Contents:
 11. [The other tabs and buttons](#11-the-other-tabs-and-buttons)
 
 ---
+# Overview 
+<img width="2543" height="1141" alt="advanced-annotated" src="https://github.com/user-attachments/assets/9863d251-5511-4507-82e8-7161c8bb3248" />
 
 ## 1. Secrets, buildups and planted facts
 
