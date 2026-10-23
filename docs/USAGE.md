@@ -8,9 +8,9 @@ How to go from an idea to a written chapter.
 
 ## Watch it
 
-> 🎬 **Video:** *coming soon* — a full chapter written from scratch.
-
+> 🎬 **Video:** 
 ## How it works
+https://christian-marheim-ai-made.github.io/story_loom/demo_video/story_loom_simple.MP4
 
 > ✏️ **Sketch:** *coming soon.* Until then, the outline:
 
